@@ -1,5 +1,6 @@
-import { BadRequestException, Controller, Get, Param, ParseIntPipe } from "@nestjs/common"
+import { BadRequestException, Body, Controller, Get, Param, ParseIntPipe, Post } from "@nestjs/common"
 import { ToolsService } from "./tools.service"
+import { CreateToolDto } from "./dto/create-tool.dto"
 
 @Controller("tools")
 export class ToolsController {
@@ -12,7 +13,7 @@ export class ToolsController {
     return { tools_count: count }
   }
 
-  // GET /api/tools/:id
+  // Custom ParseIntPipe to align validation error format with API standards
   @Get(":id")
   async getToolById(
     @Param(
@@ -28,5 +29,11 @@ export class ToolsController {
     id: number,
   ) {
     return this.toolsService.getToolById(id)
+  }
+
+  // Note: uniqueness and category existence are validated in the service layer (business rules)
+  @Post()
+  async createTool(@Body() dto: CreateToolDto) {
+    return this.toolsService.createTool(dto)
   }
 }
