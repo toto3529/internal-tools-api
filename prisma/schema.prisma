@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model access_requests {
+  id                                        Int                     @id @default(autoincrement())
+  user_id                                   Int
+  tool_id                                   Int
+  business_justification                    String                  @db.Text
+  status                                    access_requests_status? @default(pending)
+  requested_at                              DateTime?               @default(now()) @db.Timestamp(0)
+  processed_at                              DateTime?               @db.Timestamp(0)
+  processed_by                              Int?
+  processing_notes                          String?                 @db.Text
+  users_access_requests_user_idTousers      users                   @relation("access_requests_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "access_requests_ibfk_1")
+  tools                                     tools                   @relation(fields: [tool_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "access_requests_ibfk_2")
+  users_access_requests_processed_byTousers users?                  @relation("access_requests_processed_byTousers", fields: [processed_by], references: [id], onUpdate: NoAction, map: "access_requests_ibfk_3")
+
+  @@index([requested_at], map: "idx_requests_date")
+  @@index([status], map: "idx_requests_status")
+  @@index([user_id], map: "idx_requests_user")
+  @@index([processed_by], map: "processed_by")
+  @@index([tool_id], map: "tool_id")
+}
+
+model categories {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique(map: "name") @db.VarChar(50)
+  description String?   @db.Text
+  color_hex   String?   @default("#6366f1") @db.VarChar(7)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+  tools       tools[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model cost_tracking {
+  id                 Int       @id @default(autoincrement())
+  tool_id            Int
+  month_year         DateTime  @db.Date
+  total_monthly_cost Decimal   @db.Decimal(10, 2)
+  active_users_count Int       @default(0)
+  created_at         DateTime? @default(now()) @db.Timestamp(0)
+  tools              tools     @relation(fields: [tool_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cost_tracking_ibfk_1")
+
+  @@unique([tool_id, month_year], map: "unique_tool_month")
+  @@index([month_year, tool_id], map: "idx_cost_month_tool")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tools {
+  id                 Int                    @id @default(autoincrement())
+  name               String                 @db.VarChar(100)
+  description        String?                @db.Text
+  vendor             String?                @db.VarChar(100)
+  website_url        String?                @db.VarChar(255)
+  category_id        Int
+  monthly_cost       Decimal                @db.Decimal(10, 2)
+  active_users_count Int                    @default(0)
+  owner_department   tools_owner_department
+  status             tools_status?          @default(active)
+  created_at         DateTime?              @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?              @default(now()) @db.Timestamp(0)
+  access_requests    access_requests[]
+  cost_tracking      cost_tracking[]
+  categories         categories             @relation(fields: [category_id], references: [id], onUpdate: NoAction, map: "tools_ibfk_1")
+  usage_logs         usage_logs[]
+  user_tool_access   user_tool_access[]
+
+  @@index([active_users_count(sort: Desc)], map: "idx_tools_active_users")
+  @@index([category_id], map: "idx_tools_category")
+  @@index([monthly_cost(sort: Desc)], map: "idx_tools_cost_desc")
+  @@index([owner_department], map: "idx_tools_department")
+  @@index([status], map: "idx_tools_status")
+}
+
+model usage_logs {
+  id            Int       @id @default(autoincrement())
+  user_id       Int
+  tool_id       Int
+  session_date  DateTime  @db.Date
+  usage_minutes Int?      @default(0)
+  actions_count Int?      @default(0)
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "usage_logs_ibfk_1")
+  tools         tools     @relation(fields: [tool_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "usage_logs_ibfk_2")
+
+  @@index([session_date, tool_id], map: "idx_usage_date_tool")
+  @@index([user_id, session_date], map: "idx_usage_user_date")
+  @@index([tool_id], map: "tool_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model user_tool_access {
+  id                                       Int                      @id @default(autoincrement())
+  user_id                                  Int
+  tool_id                                  Int
+  granted_at                               DateTime?                @default(now()) @db.Timestamp(0)
+  granted_by                               Int
+  revoked_at                               DateTime?                @db.Timestamp(0)
+  revoked_by                               Int?
+  status                                   user_tool_access_status? @default(active)
+  users_user_tool_access_user_idTousers    users                    @relation("user_tool_access_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_tool_access_ibfk_1")
+  tools                                    tools                    @relation(fields: [tool_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_tool_access_ibfk_2")
+  users_user_tool_access_granted_byTousers users                    @relation("user_tool_access_granted_byTousers", fields: [granted_by], references: [id], onUpdate: NoAction, map: "user_tool_access_ibfk_3")
+  users_user_tool_access_revoked_byTousers users?                   @relation("user_tool_access_revoked_byTousers", fields: [revoked_by], references: [id], onUpdate: NoAction, map: "user_tool_access_ibfk_4")
+
+  @@unique([user_id, tool_id, status], map: "unique_user_tool_active")
+  @@index([granted_by], map: "granted_by")
+  @@index([granted_at], map: "idx_access_granted_date")
+  @@index([status], map: "idx_access_status")
+  @@index([tool_id], map: "idx_access_tool")
+  @@index([user_id], map: "idx_access_user")
+  @@index([revoked_by], map: "revoked_by")
+}
+
+model users {
+  id                                                  Int                @id @default(autoincrement())
+  name                                                String             @db.VarChar(100)
+  email                                               String             @unique(map: "email") @db.VarChar(150)
+  department                                          users_department
+  role                                                users_role?        @default(employee)
+  status                                              users_status?      @default(active)
+  hire_date                                           DateTime?          @db.Date
+  created_at                                          DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at                                          DateTime?          @default(now()) @db.Timestamp(0)
+  access_requests_access_requests_user_idTousers      access_requests[]  @relation("access_requests_user_idTousers")
+  access_requests_access_requests_processed_byTousers access_requests[]  @relation("access_requests_processed_byTousers")
+  usage_logs                                          usage_logs[]
+  user_tool_access_user_tool_access_user_idTousers    user_tool_access[] @relation("user_tool_access_user_idTousers")
+  user_tool_access_user_tool_access_granted_byTousers user_tool_access[] @relation("user_tool_access_granted_byTousers")
+  user_tool_access_user_tool_access_revoked_byTousers user_tool_access[] @relation("user_tool_access_revoked_byTousers")
+
+  @@index([department], map: "idx_users_department")
+  @@index([status], map: "idx_users_status")
+}
+
+enum users_department {
+  Engineering
+  Sales
+  Marketing
+  HR
+  Finance
+  Operations
+  Design
+}
+
+enum access_requests_status {
+  pending
+  approved
+  rejected
+}
+
+enum users_role {
+  employee
+  manager
+  admin
+}
+
+enum users_status {
+  active
+  inactive
+}
+
+enum user_tool_access_status {
+  active
+  revoked
+}
+
+enum tools_owner_department {
+  Engineering
+  Sales
+  Marketing
+  HR
+  Finance
+  Operations
+  Design
+}
+
+enum tools_status {
+  active
+  deprecated
+  trial
+}
