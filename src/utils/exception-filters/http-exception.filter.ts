@@ -12,11 +12,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     // 400 - Validation errors
     if (status === HttpStatus.BAD_REQUEST) {
-      // Nest/class-validator fournit souvent message: string[]
-      const messages = Array.isArray(responseData?.message) ? responseData.message : [responseData?.message ?? "Validation failed"]
+      if (responseData?.error === "Validation failed" && responseData?.details) {
+        response.status(status).json(responseData)
+        return
+      }
 
-      // Format simple au début : on met tout dans general
-      // TODO à affiner avec les DTO
+      // Nest/class-validator fournit souvent message: string[] (ou string)
+      const rawMessage = responseData?.message ?? "Validation failed"
+
+      const messages = Array.isArray(rawMessage) ? rawMessage : [rawMessage]
+
       response.status(status).json({
         error: "Validation failed",
         details: {
@@ -28,17 +33,21 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     // 404 - Not found
     if (status === HttpStatus.NOT_FOUND) {
+      const msg = responseData?.message ?? exception.message ?? "Resource not found"
+
       response.status(status).json({
         error: "Tool not found",
-        message: exception.message,
+        message: msg,
       })
       return
     }
 
     // Autres erreurs HTTP
+    const message = (typeof responseData === "string" && responseData) || responseData?.message || exception.message || "Request failed"
+
     response.status(status).json({
       error: "Request failed",
-      message: exception.message,
+      message,
       path: request.url,
     })
   }
