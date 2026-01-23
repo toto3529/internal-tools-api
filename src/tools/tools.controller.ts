@@ -3,9 +3,20 @@ import { ToolsService } from "./tools.service"
 import { CreateToolDto } from "./dto/create-tool.dto"
 import { UpdateToolDto } from "./dto/update-tool.dto"
 import { ListToolsQueryDto } from "./dto/list-tools.query.dto"
-import { ApiTags, ApiQuery } from "@nestjs/swagger"
+import {
+  ApiTags,
+  ApiQuery,
+  ApiOkResponse,
+  ApiBadRequestResponse,
+  ApiInternalServerErrorResponse,
+  getSchemaPath,
+  ApiExtraModels,
+} from "@nestjs/swagger"
+import { ToolListResponseSwagger } from "./swagger/tool-list-response.swagger"
+import { ErrorResponseSwagger } from "./swagger/error-response.swagger"
 
 @ApiTags("tools")
+@ApiExtraModels(ErrorResponseSwagger, ToolListResponseSwagger)
 @Controller("tools")
 export class ToolsController {
   constructor(private readonly toolsService: ToolsService) {}
@@ -18,6 +29,47 @@ export class ToolsController {
   }
 
   @Get()
+  @ApiOkResponse({
+    description: "List tools with filters, pagination and sorting",
+    type: ToolListResponseSwagger,
+  })
+  @ApiBadRequestResponse({
+    description: "Validation failed (invalid query parameters or business rules)",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          validationError: {
+            summary: "Validation error",
+            value: {
+              error: "Validation failed",
+              details: {
+                min_cost: "min_cost must be <= max_cost",
+                max_cost: "max_cost must be >= min_cost",
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: "Internal server error (database unavailable)",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          dbDown: {
+            summary: "Database unavailable",
+            value: {
+              error: "Internal server error",
+              message: "Database connection failed",
+            },
+          },
+        },
+      },
+    },
+  })
   @ApiQuery({ name: "order", required: false, enum: ["asc", "desc"], example: "desc" })
   @ApiQuery({ name: "sort_by", required: false, enum: ["name", "cost", "date"], example: "date" })
   @ApiQuery({ name: "limit", required: false, type: Number, example: 20 })
