@@ -11,9 +11,11 @@ import {
   ApiInternalServerErrorResponse,
   getSchemaPath,
   ApiExtraModels,
+  ApiOperation,
 } from "@nestjs/swagger"
 import { ToolListResponseSwagger } from "./swagger/tool-list-response.swagger"
 import { ErrorResponseSwagger } from "./swagger/error-response.swagger"
+import { ToolHealthResponseSwagger } from "./swagger/tool-health.swagger"
 
 @ApiTags("tools")
 @ApiExtraModels(ErrorResponseSwagger, ToolListResponseSwagger)
@@ -22,6 +24,8 @@ export class ToolsController {
   constructor(private readonly toolsService: ToolsService) {}
 
   @Get("health")
+  @ApiOperation({ summary: "Health check" })
+  @ApiOkResponse({ type: ToolHealthResponseSwagger })
   async healthCheck() {
     const count = await this.toolsService.countTools()
     return { tools_count: count }
