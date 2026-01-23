@@ -22,9 +22,10 @@ import { ErrorResponseSwagger } from "./swagger/error-response.swagger"
 import { ToolHealthResponseSwagger } from "./swagger/tool-health.swagger"
 import { ToolCreateBodySwagger } from "./swagger/tool-create-body.swagger"
 import { ToolListItemSwagger } from "./swagger/tool-list-item.swagger"
+import { ToolDetailResponseSwagger } from "./swagger/tool-detail-response.swagger"
 
 @ApiTags("tools")
-@ApiExtraModels(ErrorResponseSwagger, ToolListResponseSwagger)
+@ApiExtraModels(ErrorResponseSwagger, ToolListResponseSwagger, ToolListItemSwagger, ToolDetailResponseSwagger, ToolUsageMetricsSwagger)
 @Controller("tools")
 export class ToolsController {
   constructor(private readonly toolsService: ToolsService) {}
@@ -97,6 +98,59 @@ export class ToolsController {
   }
 
   @Get(":id")
+  @ApiOperation({ summary: "Get tool details by id" })
+  @ApiOkResponse({ type: ToolDetailResponseSwagger })
+  @ApiBadRequestResponse({
+    description: "Validation failed (id must be a number)",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          invalidId: {
+            summary: "Invalid id",
+            value: {
+              error: "Validation failed",
+              details: { id: "Value must be a number" },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: "Tool not found",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          toolNotFound: {
+            summary: "Not found",
+            value: {
+              error: "Tool not found",
+              message: "Tool does not exist",
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: "Internal server error (database unavailable)",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          dbDown: {
+            summary: "Database unavailable",
+            value: {
+              error: "Internal server error",
+              message: "Database connection failed",
+            },
+          },
+        },
+      },
+    },
+  })
   async getToolById(
     @Param(
       "id",

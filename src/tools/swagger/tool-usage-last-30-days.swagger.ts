@@ -4,6 +4,6 @@ export class ToolUsageLast30DaysSwagger {
   @ApiProperty({ example: 120 })
   total_sessions: number
 
-  @ApiProperty({ example: 14.2 })
+  @ApiProperty({ example: 42 })
   avg_session_minutes: number
 }
