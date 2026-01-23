@@ -187,4 +187,35 @@ export class ToolsService {
       updated_at: updatedTool.updated_at,
     }
   }
+
+  async getTools() {
+    const tools = await this.prisma.tools.findMany({
+      include: {
+        categories: true,
+      },
+      orderBy: {
+        created_at: "desc",
+      },
+    })
+
+    const total = await this.prisma.tools.count()
+
+    return {
+      data: tools.map((tool) => ({
+        id: tool.id,
+        name: tool.name,
+        description: tool.description,
+        vendor: tool.vendor,
+        website_url: tool.website_url,
+        category: tool.categories.name,
+        monthly_cost: Number(tool.monthly_cost),
+        owner_department: tool.owner_department,
+        status: tool.status,
+        active_users_count: tool.active_users_count,
+        created_at: tool.created_at,
+        updated_at: tool.updated_at,
+      })),
+      total,
+    }
+  }
 }

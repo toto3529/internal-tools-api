@@ -14,6 +14,11 @@ export class ToolsController {
     return { tools_count: count }
   }
 
+  @Get()
+  async getTools() {
+    return this.toolsService.getTools()
+  }
+
   // Custom ParseIntPipe to align validation error format with API standards
   @Get(":id")
   async getToolById(
