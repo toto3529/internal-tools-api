@@ -43,7 +43,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
       return response.status(status).json({
         error: "Internal server error",
-        message: "Internal server error",
+        message: "Database connection failed",
       })
     }
 
