@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, Length, IsOptional, IsUrl, IsNumber, Min, IsEnum, MaxLength } from "class-validator"
+import { IsString, IsNotEmpty, Length, IsOptional, IsUrl, IsNumber, Min, IsEnum, MaxLength, IsInt } from "class-validator"
 import { Type } from "class-transformer"
 import { tools_owner_department } from "@prisma/client"
 
@@ -22,7 +22,8 @@ export class CreateToolDto {
   website_url?: string
 
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
+  @Min(1)
   category_id: number
 
   @Type(() => Number)

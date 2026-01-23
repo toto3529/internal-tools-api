@@ -1,5 +1,5 @@
 import { Type } from "class-transformer"
-import { IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator"
+import { IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min } from "class-validator"
 import { tools_owner_department, tools_status } from "@prisma/client"
 
 export enum ToolsSortBy {
@@ -14,7 +14,6 @@ export enum SortOrder {
 }
 
 export class ListToolsQueryDto {
-  // Filters
   @IsOptional()
   @IsEnum(tools_owner_department)
   department?: tools_owner_department
@@ -23,7 +22,6 @@ export class ListToolsQueryDto {
   @IsEnum(tools_status)
   status?: tools_status
 
-  // Category name
   @IsOptional()
   @IsString()
   category?: string
@@ -40,7 +38,6 @@ export class ListToolsQueryDto {
   @Min(0)
   max_cost?: number
 
-  // Pagination
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -54,7 +51,6 @@ export class ListToolsQueryDto {
   @Max(100)
   limit?: number
 
-  // Sorting
   @IsOptional()
   @IsEnum(ToolsSortBy)
   sort_by?: ToolsSortBy
