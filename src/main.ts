@@ -8,10 +8,8 @@ import { HttpExceptionFilter } from "./utils/exception-filters/http-exception.fi
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
 
-  // Préfixe global /api
   app.setGlobalPrefix("api")
 
-  // Swagger
   const config = new DocumentBuilder()
     .setTitle("Internal Tools API")
     .setDescription("API for internal SaaS tools management")
@@ -21,7 +19,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config)
   SwaggerModule.setup("api/docs", app, document)
 
-  // Validation globale
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -31,10 +28,9 @@ async function bootstrap() {
     }),
   )
 
-  // Exception filters globaux
   app.useGlobalFilters(new HttpExceptionFilter(), new PrismaExceptionFilter())
 
-  const port = 3000
+  const port = Number(process.env.PORT ?? 3000)
   await app.listen(port)
 
   console.log(`[API] Listening on http://localhost:${port}/api`)
