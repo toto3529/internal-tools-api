@@ -12,10 +12,15 @@ import {
   getSchemaPath,
   ApiExtraModels,
   ApiOperation,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
 } from "@nestjs/swagger"
 import { ToolListResponseSwagger } from "./swagger/tool-list-response.swagger"
 import { ErrorResponseSwagger } from "./swagger/error-response.swagger"
 import { ToolHealthResponseSwagger } from "./swagger/tool-health.swagger"
+import { ToolCreateBodySwagger } from "./swagger/tool-create-body.swagger"
+import { ToolListItemSwagger } from "./swagger/tool-list-item.swagger"
 
 @ApiTags("tools")
 @ApiExtraModels(ErrorResponseSwagger, ToolListResponseSwagger)
@@ -32,6 +37,10 @@ export class ToolsController {
   }
 
   @Get()
+  @ApiOperation({
+    summary: "List tools",
+    description: "List tools with optional filters, pagination and sorting.",
+  })
   @ApiOkResponse({
     description: "List tools with filters, pagination and sorting",
     type: ToolListResponseSwagger,
@@ -104,6 +113,12 @@ export class ToolsController {
   }
 
   @Post()
+  @ApiOperation({ summary: "Create a new tool" })
+  @ApiBody({ type: ToolCreateBodySwagger })
+  @ApiCreatedResponse({ type: ToolListItemSwagger })
+  @ApiBadRequestResponse({ type: ErrorResponseSwagger })
+  @ApiNotFoundResponse({ type: ErrorResponseSwagger })
+  @ApiInternalServerErrorResponse({ type: ErrorResponseSwagger })
   async createTool(@Body() dto: CreateToolDto) {
     return this.toolsService.createTool(dto)
   }
