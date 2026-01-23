@@ -1,6 +1,7 @@
-import { BadRequestException, Body, Controller, Get, Param, ParseIntPipe, Post } from "@nestjs/common"
+import { BadRequestException, Body, Controller, Get, Param, ParseIntPipe, Post, Put } from "@nestjs/common"
 import { ToolsService } from "./tools.service"
 import { CreateToolDto } from "./dto/create-tool.dto"
+import { UpdateToolDto } from "./dto/update-tool.dto"
 
 @Controller("tools")
 export class ToolsController {
@@ -35,5 +36,23 @@ export class ToolsController {
   @Post()
   async createTool(@Body() dto: CreateToolDto) {
     return this.toolsService.createTool(dto)
+  }
+
+  @Put(":id")
+  async updateTool(
+    @Param(
+      "id",
+      new ParseIntPipe({
+        exceptionFactory: () =>
+          new BadRequestException({
+            error: "Validation failed",
+            details: { id: "Value must be a number" },
+          }),
+      }),
+    )
+    id: number,
+    @Body() dto: UpdateToolDto,
+  ) {
+    return this.toolsService.updateTool(id, dto)
   }
 }

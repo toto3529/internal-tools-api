@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common"
 import { PrismaService } from "src/prisma/prisma.service"
 import { CreateToolDto } from "./dto/create-tool.dto"
+import { UpdateToolDto } from "./dto/update-tool.dto"
 
 @Injectable()
 export class ToolsService {
@@ -113,6 +114,77 @@ export class ToolsService {
       active_users_count: tool.active_users_count,
       created_at: tool.created_at,
       updated_at: tool.updated_at,
+    }
+  }
+
+  async updateTool(id: number, dto: UpdateToolDto) {
+    const existingTool = await this.prisma.tools.findUnique({
+      where: { id },
+    })
+
+    if (!existingTool) {
+      throw new NotFoundException(`Tool with ID ${id} does not exist`)
+    }
+
+    // ✅ Unicité du name si modifié
+    if (dto.name && dto.name !== existingTool.name) {
+      const nameExists = await this.prisma.tools.findFirst({
+        where: { name: dto.name },
+      })
+
+      if (nameExists) {
+        throw new BadRequestException({
+          error: "Validation failed",
+          details: { name: "Tool name must be unique" },
+        })
+      }
+    }
+
+    // ✅ category_id doit exister si fourni
+    if (dto.category_id !== undefined) {
+      const category = await this.prisma.categories.findUnique({
+        where: { id: dto.category_id },
+      })
+
+      if (!category) {
+        throw new BadRequestException({
+          error: "Validation failed",
+          details: { category_id: "Category does not exist" },
+        })
+      }
+    }
+
+    const updatedTool = await this.prisma.tools.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.vendor !== undefined ? { vendor: dto.vendor } : {}),
+        ...(dto.website_url !== undefined ? { website_url: dto.website_url } : {}),
+        ...(dto.category_id !== undefined ? { category_id: dto.category_id } : {}),
+        ...(dto.monthly_cost !== undefined ? { monthly_cost: dto.monthly_cost } : {}),
+        ...(dto.owner_department !== undefined ? { owner_department: dto.owner_department } : {}),
+        ...(dto.status !== undefined ? { status: dto.status } : {}),
+        updated_at: new Date(),
+      },
+      include: {
+        categories: true,
+      },
+    })
+
+    return {
+      id: updatedTool.id,
+      name: updatedTool.name,
+      description: updatedTool.description,
+      vendor: updatedTool.vendor,
+      website_url: updatedTool.website_url,
+      category: updatedTool.categories.name,
+      monthly_cost: Number(updatedTool.monthly_cost),
+      owner_department: updatedTool.owner_department,
+      status: updatedTool.status,
+      active_users_count: updatedTool.active_users_count,
+      created_at: updatedTool.created_at,
+      updated_at: updatedTool.updated_at,
     }
   }
 }
