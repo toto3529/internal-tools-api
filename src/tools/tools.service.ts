@@ -62,7 +62,6 @@ export class ToolsService {
     }
   }
 
-  // Business validations (DB-dependent) are handled here: unique name and existing category
   async createTool(dto: CreateToolDto) {
     const existing = await this.prisma.tools.findFirst({
       where: { name: dto.name },
@@ -128,7 +127,7 @@ export class ToolsService {
       throw new NotFoundException(`Tool with ID ${id} does not exist`)
     }
 
-    // ✅ Unicité du name si modifié
+    // Unicité du name si modifié
     if (dto.name && dto.name !== existingTool.name) {
       const nameExists = await this.prisma.tools.findFirst({
         where: { name: dto.name },
@@ -142,7 +141,7 @@ export class ToolsService {
       }
     }
 
-    // ✅ category_id doit exister si fourni
+    // Category_id doit exister si fourni
     if (dto.category_id !== undefined) {
       const category = await this.prisma.categories.findUnique({
         where: { id: dto.category_id },
