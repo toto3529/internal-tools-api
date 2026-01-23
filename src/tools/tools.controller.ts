@@ -23,6 +23,8 @@ import { ToolHealthResponseSwagger } from "./swagger/tool-health.swagger"
 import { ToolCreateBodySwagger } from "./swagger/tool-create-body.swagger"
 import { ToolListItemSwagger } from "./swagger/tool-list-item.swagger"
 import { ToolDetailResponseSwagger } from "./swagger/tool-detail-response.swagger"
+import { ToolUsageMetricsSwagger } from "./swagger/tool-usage-metrics.swagger"
+import { ToolUpdateBodySwagger } from "./swagger/tool-update-body.swagger"
 
 @ApiTags("tools")
 @ApiExtraModels(ErrorResponseSwagger, ToolListResponseSwagger, ToolListItemSwagger, ToolDetailResponseSwagger, ToolUsageMetricsSwagger)
@@ -257,6 +259,86 @@ export class ToolsController {
   }
 
   @Put(":id")
+  @ApiOperation({ summary: "Update a tool" })
+  @ApiBody({ type: ToolUpdateBodySwagger })
+  @ApiOkResponse({ type: ToolListItemSwagger })
+  @ApiBadRequestResponse({
+    description: "Validation failed (invalid id or invalid body)",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          invalidId: {
+            summary: "Invalid id",
+            value: {
+              error: "Validation failed",
+              details: { id: "Value must be a number" },
+            },
+          },
+          invalidBody: {
+            summary: "Invalid body",
+            value: {
+              error: "Validation failed",
+              details: {
+                monthly_cost: "monthly_cost must be a number with max 2 decimals",
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: "Tool not found",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          toolNotFound: {
+            summary: "Not found",
+            value: {
+              error: "Tool not found",
+              message: "Tool does not exist",
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiConflictResponse({
+    description: "Conflict (tool name must be unique)",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          duplicateName: {
+            summary: "Duplicate name",
+            value: {
+              error: "Validation failed",
+              details: { name: "Tool name must be unique" },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: "Internal server error (database unavailable)",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          dbDown: {
+            summary: "Database unavailable",
+            value: {
+              error: "Internal server error",
+              message: "Database connection failed",
+            },
+          },
+        },
+      },
+    },
+  })
   async updateTool(
     @Param(
       "id",
