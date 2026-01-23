@@ -21,7 +21,6 @@ import { ErrorResponseSwagger } from "./swagger/error-response.swagger"
 export class ToolsController {
   constructor(private readonly toolsService: ToolsService) {}
 
-  // Endpoint technique
   @Get("health")
   async healthCheck() {
     const count = await this.toolsService.countTools()
@@ -83,7 +82,6 @@ export class ToolsController {
     return this.toolsService.getTools(query)
   }
 
-  // Custom ParseIntPipe to align validation error format with API standards
   @Get(":id")
   async getToolById(
     @Param(
@@ -101,7 +99,6 @@ export class ToolsController {
     return this.toolsService.getToolById(id)
   }
 
-  // Note: uniqueness and category existence are validated in the service layer (business rules)
   @Post()
   async createTool(@Body() dto: CreateToolDto) {
     return this.toolsService.createTool(dto)
