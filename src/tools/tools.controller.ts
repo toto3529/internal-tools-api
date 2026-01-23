@@ -15,6 +15,7 @@ import {
   ApiBody,
   ApiCreatedResponse,
   ApiNotFoundResponse,
+  ApiConflictResponse,
 } from "@nestjs/swagger"
 import { ToolListResponseSwagger } from "./swagger/tool-list-response.swagger"
 import { ErrorResponseSwagger } from "./swagger/error-response.swagger"
@@ -116,9 +117,87 @@ export class ToolsController {
   @ApiOperation({ summary: "Create a new tool" })
   @ApiBody({ type: ToolCreateBodySwagger })
   @ApiCreatedResponse({ type: ToolListItemSwagger })
-  @ApiBadRequestResponse({ type: ErrorResponseSwagger })
-  @ApiNotFoundResponse({ type: ErrorResponseSwagger })
-  @ApiInternalServerErrorResponse({ type: ErrorResponseSwagger })
+  @ApiBadRequestResponse({
+    description: "Validation failed (invalid body)",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          missingName: {
+            summary: "Missing required field",
+            value: {
+              error: "Validation failed",
+              details: {
+                name: "name should not be empty",
+              },
+            },
+          },
+          invalidCost: {
+            summary: "Invalid monthly_cost format",
+            value: {
+              error: "Validation failed",
+              details: {
+                monthly_cost: "monthly_cost must be a number with max 2 decimals",
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiConflictResponse({
+    description: "Conflict (tool name already exists)",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          duplicateName: {
+            summary: "Duplicate tool name",
+            value: {
+              error: "Validation failed",
+              details: {
+                name: "Tool name must be unique",
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: "Tool not found",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          toolNotFound: {
+            summary: "Not found",
+            value: {
+              error: "Tool not found",
+              message: "Tool does not exist",
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: "Internal server error (database unavailable)",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorResponseSwagger) },
+        examples: {
+          dbDown: {
+            summary: "Database unavailable",
+            value: {
+              error: "Internal server error",
+              message: "Database connection failed",
+            },
+          },
+        },
+      },
+    },
+  })
   async createTool(@Body() dto: CreateToolDto) {
     return this.toolsService.createTool(dto)
   }
