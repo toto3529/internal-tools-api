@@ -1,39 +1,98 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus } from "@nestjs/common"
 import { Prisma } from "@prisma/client"
+import {
+  PrismaClientInitializationError,
+  PrismaClientRustPanicError,
+  PrismaClientUnknownRequestError,
+  PrismaClientValidationError,
+} from "@prisma/client/runtime/library"
 import { Request, Response } from "express"
 
-@Catch(Prisma.PrismaClientKnownRequestError)
+@Catch(
+  Prisma.PrismaClientKnownRequestError,
+  PrismaClientInitializationError,
+  PrismaClientUnknownRequestError,
+  PrismaClientRustPanicError,
+  PrismaClientValidationError,
+)
 export class PrismaExceptionFilter implements ExceptionFilter {
-  catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
+  catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
     const response = ctx.getResponse<Response>()
     const request = ctx.getRequest<Request>()
 
     // P2002 = unique constraint failed
-    if (exception.code === "P2002") {
-      return response.status(HttpStatus.CONFLICT).json({
-        error: "Validation failed",
-        details: {
-          name: "Name must be unique",
-        },
+    if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      if (exception.code === "P2002") {
+        return response.status(HttpStatus.CONFLICT).json({
+          error: "Validation failed",
+          details: {
+            name: "Name must be unique",
+          },
+          path: request.url,
+        })
+      }
+
+      // P2025 = record not found (update/delete/find)
+      if (exception.code === "P2025") {
+        return response.status(HttpStatus.NOT_FOUND).json({
+          error: "Tool not found",
+          message: "Tool does not exist",
+          path: request.url,
+        })
+      }
+
+      // Fallback Prisma (ex: DB unavailable after startup, unexpected prisma errors)
+      console.error("[API] Prisma error", {
+        path: request.url,
+        method: request.method,
+        code: exception.code,
+        error: exception,
+      })
+
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        error: "Internal server error",
+        message: "Database connection failed",
+      })
+    }
+
+    // DB connection / engine errors → 500
+    if (
+      exception instanceof PrismaClientInitializationError ||
+      exception instanceof PrismaClientUnknownRequestError ||
+      exception instanceof PrismaClientRustPanicError
+    ) {
+      console.error("[API] Prisma DB error", {
+        path: request.url,
+        method: request.method,
+        error: exception,
+      })
+
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        error: "Internal server error",
+        message: "Database connection failed",
+      })
+    }
+
+    // Prisma validation errors (bad query shape) → 400
+    if (exception instanceof PrismaClientValidationError) {
+      return response.status(HttpStatus.BAD_REQUEST).json({
+        error: "Request failed",
+        message: "Database request failed",
         path: request.url,
       })
     }
 
-    // P2025 = record not found (update/delete/find)
-    if (exception.code === "P2025") {
-      return response.status(HttpStatus.NOT_FOUND).json({
-        error: "Tool not found",
-        message: "Tool does not exist",
-        path: request.url,
-      })
-    }
-
-    // Fallback
-    return response.status(HttpStatus.BAD_REQUEST).json({
-      error: "Request failed",
-      message: "Database request failed",
+    // fallback
+    console.error("[API] Unknown prisma error", {
       path: request.url,
+      method: request.method,
+      error: exception,
+    })
+
+    return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      error: "Internal server error",
+      message: "Database connection failed",
     })
   }
 }

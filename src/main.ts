@@ -32,12 +32,14 @@ async function bootstrap() {
   )
 
   // Exception filters globaux
-  app.useGlobalFilters(new PrismaExceptionFilter(), new HttpExceptionFilter())
+  app.useGlobalFilters(new HttpExceptionFilter(), new PrismaExceptionFilter())
 
   const port = 3000
-  await app.listen(3000)
+  await app.listen(port)
 
-  console.log(` Swagger Docs : http://localhost:${port}/api/docs`)
+  console.log(`[API] Listening on http://localhost:${port}/api`)
+  console.log(`[API] Swagger on http://localhost:${port}/api/docs`)
+  console.log(`[API] Environment: ${process.env.NODE_ENV ?? "development"}`)
 }
 
 bootstrap()
