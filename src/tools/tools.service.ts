@@ -2,6 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { PrismaService } from "src/prisma/prisma.service"
 import { CreateToolDto } from "./dto/create-tool.dto"
 import { UpdateToolDto } from "./dto/update-tool.dto"
+import { Prisma } from "@prisma/client"
+import { ListToolsQueryDto, SortOrder, ToolsSortBy } from "./dto/list-tools.query.dto"
 
 @Injectable()
 export class ToolsService {
@@ -188,17 +190,66 @@ export class ToolsService {
     }
   }
 
-  async getTools() {
-    const tools = await this.prisma.tools.findMany({
-      include: {
-        categories: true,
-      },
-      orderBy: {
-        created_at: "desc",
-      },
-    })
+  async getTools(query: ListToolsQueryDto) {
+    const { department, status, category, min_cost, max_cost, page = 1, limit = 20, sort_by = ToolsSortBy.DATE, order = SortOrder.DESC } = query
 
-    const total = await this.prisma.tools.count()
+    if (min_cost !== undefined && max_cost !== undefined && min_cost > max_cost) {
+      throw new BadRequestException({
+        error: "Validation failed",
+        details: {
+          min_cost: "min_cost must be <= max_cost",
+          max_cost: "max_cost must be >= min_cost",
+        },
+      })
+    }
+
+    const where: Prisma.toolsWhereInput = {
+      ...(department ? { owner_department: department } : {}),
+      ...(status ? { status } : {}),
+      ...(min_cost !== undefined || max_cost !== undefined
+        ? {
+            monthly_cost: {
+              ...(min_cost !== undefined ? { gte: min_cost } : {}),
+              ...(max_cost !== undefined ? { lte: max_cost } : {}),
+            },
+          }
+        : {}),
+      ...(category
+        ? {
+            categories: {
+              name: category,
+            },
+          }
+        : {}),
+    }
+
+    const orderBy: Prisma.toolsOrderByWithRelationInput =
+      sort_by === ToolsSortBy.NAME ? { name: order } : sort_by === ToolsSortBy.COST ? { monthly_cost: order } : { created_at: order }
+
+    const skip = (page - 1) * limit
+
+    const [total, filtered, tools] = await this.prisma.$transaction([
+      this.prisma.tools.count(),
+      this.prisma.tools.count({ where }),
+      this.prisma.tools.findMany({
+        where,
+        include: { categories: true },
+        orderBy,
+        skip,
+        take: limit,
+      }),
+    ])
+
+    const filters_applied: Record<string, unknown> = {}
+    if (department) filters_applied.department = department
+    if (status) filters_applied.status = status
+    if (category) filters_applied.category = category
+    if (min_cost !== undefined) filters_applied.min_cost = min_cost
+    if (max_cost !== undefined) filters_applied.max_cost = max_cost
+    if (query.page !== undefined) filters_applied.page = page
+    if (query.limit !== undefined) filters_applied.limit = limit
+    if (query.sort_by !== undefined) filters_applied.sort_by = sort_by
+    if (query.order !== undefined) filters_applied.order = order
 
     return {
       data: tools.map((tool) => ({
@@ -216,6 +267,8 @@ export class ToolsService {
         updated_at: tool.updated_at,
       })),
       total,
+      filtered,
+      filters_applied,
     }
   }
 }
